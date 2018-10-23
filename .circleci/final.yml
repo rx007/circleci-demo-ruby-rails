@@ -1,7 +1,6 @@
 version: 2
 jobs:
   build:
-    parallelism: 2
     docker:
     - image: circleci/ruby:2.4.2-jessie-node
       environment:
@@ -12,21 +11,12 @@ jobs:
       environment:
         POSTGRES_USER: circleci-demo-ruby
         POSTGRES_DB: rails_blog
-        # Add this to context
-        POSTGRES_PASSWORD: $PG_PASSWORD
+        POSTGRES_PASSWORD: ""
     steps:
     - checkout
-    # Restore bundle cache
-    - type: cache-restore
-      key: v1-rails-demo-{{ checksum "Gemfile.lock" }}
     - run:
         name: Bundle install
         command: bundle install --path vendor/bundle
-    # Store bundle cache
-    - type: cache-save
-      key: v1-rails-demo-{{ checksum "Gemfile.lock" }}
-      paths:
-        - vendor/bundle
     - run:
         name: Wait for DB
         command: dockerize -wait tcp://localhost:5432 -timeout 1m
@@ -36,10 +26,7 @@ jobs:
     - run:
         name: Run rspec in parallel
         command: |
-          bundle exec rspec --format RspecJunitFormatter --out test_results/rspec.xml $(circleci tests glob "spec/**/*_spec.rb" | circleci tests split --split-by=timings)
-
-    - store_test_results:
-        path: test_results
+          bundle exec rspec
 
   lint:
     docker:
@@ -58,5 +45,6 @@ workflows:
   version: 2
   workflow:
     jobs:
-      - build
+      - build:
+          context: demo
       - lint
